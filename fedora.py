@@ -64,7 +64,7 @@ def analyze(ctl, repo, filename, results_dir, results_file):
     elfs = ctl.find_elfs()
     if elfs:
         results = ctl.scan_elfs(filename, elfs)
-        ctl.redteam.funcs.mkdir_p(results_dir)
+        Utility.CTLUtils.mkdir_p(results_dir)
         with open(results_file, 'w') as f:
             json.dump({'metadata': metadata,
                        'results': results}, f, indent=4)
