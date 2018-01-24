@@ -9,6 +9,7 @@ from datetime import datetime
 
 sys.path.append('.')
 from cybertestlab import CyberTestLab
+from cybertestlab import Utility
 
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
@@ -23,19 +24,22 @@ def main(argv):
     output_dir = sys.argv[1]
     repo_dir = sys.argv[2]
     swap_path = sys.argv[3]
-    repos = ['fedora','google-chrome','rpmfusion-free','rpmfusion-free-updates','rpmfusion-nonfree','rpmfusion-nonfree-updates','spideroak-one-stable','updates']
+    #repos = ['fedora','google-chrome','rpmfusion-free','rpmfusion-free-updates','rpmfusion-nonfree','rpmfusion-nonfree-updates','spideroak-one-stable','updates']
+    repos = ['google-chrome']
     ctl = CyberTestLab.CyberTestLab(repo_dir=repo_dir,
                                     swap_path=swap_path,
-                                    repos=repos,
+                                    repo_list=repos,
                                     debug=True)
-    ctl.redteam.funcs.mkdir_p(repo_dir)
-    ctl.redteam.funcs.mkdir_p(swap_path)
+    Utility.CTLUtils.mkdir_p(repo_dir)
+    Utility.CTLUtils.mkdir_p(swap_path)
 
-    # if debug:
-    #     print('+ syncing repos')
-    # ctl.repo_sync('reposync')
+    #if debug:
+    #    print('+ syncing repos')
+    #ctl.repo_sync('reposync')
 
     for repo in ctl.repo_list:
+        if debug:
+            print("repo " + repo)
         for root, dirs, files in os.walk(repo_dir + '/' + repo):
             for filename in files:
                 if debug:
