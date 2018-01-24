@@ -23,3 +23,8 @@ def test_which():
 
 def test_is_executable():
     assert Utility.CTLUtils.is_executable("/usr/bin/ls")
+
+def test_mkdir_p():
+    Utility.CTLUtils.mkdir_p("/tmp/test_dir")
+    # We should end up with an exception if this fails
+    assert True

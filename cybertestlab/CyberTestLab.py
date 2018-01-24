@@ -92,6 +92,9 @@ class CyberTestLab(object):
 
         return rpm_data
 
+    def find_elfs(self):
+        return CTLUtils.find_elfs(self.swap_path)
+
     def scan_elfs(self, rpm, elfs):
         if not elfs:
             raise Exception('scan_elfs: you gave me an empty list of elfs you dope')

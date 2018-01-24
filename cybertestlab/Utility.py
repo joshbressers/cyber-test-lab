@@ -58,3 +58,12 @@ class CTLUtils(object):
         else:
             return filter(None, elfs)
 
+    @staticmethod
+    def mkdir_p(path):
+        try:
+            os.makedirs(path)
+        except OSError as e:
+            if e.errno == 17 and os.path.isdir(path):
+                pass
+            else:
+                raise
