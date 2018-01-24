@@ -3,7 +3,9 @@
 import os
 import sys
 import subprocess
-import magic
+
+from cybertestlab import *
+from cybertestlab.Utility import CTLUtils
 
 import r2pipe
 
@@ -26,29 +28,7 @@ class Analysis(object):
         if kwargs.get('path'):
             path = kwargs['path']
 
-        find_results = []
-
-        rootDir = path
-        for dirName, subdirList, fileList in os.walk(path):
-            for fname in fileList:
-                the_file = os.path.join(path, fname)
-                try:
-                    file_type = magic.from_file(the_file)
-                    if 'ELF' in file_type:
-                        find_results.append(the_file)
-                except:
-                    # Sometimes we fail to read the file for various
-                    # reasons
-                    pass
-
-        elfs = []
-        for result in filter(None, find_results):
-            elfs.append(result.split(':')[0])
-
-        if len(elfs) == 0:
-            return None
-        else:
-            return filter(None, elfs)
+        return CTLUtils.find_elfs(path=path)
 
     def scan_elfs(self, elfs):
         if not elfs:
@@ -118,6 +98,7 @@ class Analysis(object):
             print('++ get_complexity getting cyclomatic complexity via r2 for: ' + elf)
         complexity = 0
         cycles_cost = 0
+        r2 = None
         try:
             r2 = r2pipe.open(elf)
             if self.debug:
@@ -140,7 +121,8 @@ class Analysis(object):
         except Exception as e:
             if self.debug:
                 print('+ get_complexity caught exception: ' + str(e))
-            r2.quit()
+            if r2 is not None:
+		    r2.quit()
             return {'r2aa': 'failed: ' + str(e)}
 
         r2.quit()

@@ -6,7 +6,7 @@ import sys
 import r2pipe
 import timeout_decorator
 
-from redteam import redteam
+from Utility import CTLUtils
 
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
@@ -17,13 +17,6 @@ __status__ = 'beta'
 
 class CyberTestLab(object):
     def __init__(self, **kwargs):
-        self.redteam = redteam.RedTeam(debug=True,
-                                       init_trello=False,
-                                       init_sapi=False,
-                                       init_edb=False,
-                                       connect_to_trello=False,
-                                       cache_dir='~/.redteam')
-        self.sapi = redteam.SAPI.SAPI()
 
         self.repo_dir = '/repo'
         if kwargs.get('repo_dir'):
@@ -37,7 +30,7 @@ class CyberTestLab(object):
         if kwargs.get('repo_list'):
             self.repo_list = kwargs['repo_list']
 
-        self.hardening_check = self.redteam.funcs.which('hardening-check')
+        self.hardening_check = CTLUtils.which('hardening-check')
         if kwargs.get('hardening_check'):
             self.hardening_check = kwargs['hardening_check']
         if not self.hardening_check:
@@ -53,34 +46,34 @@ class CyberTestLab(object):
             args = ' -p ' + self.repo_dir
         else:
             raise Exception('CyberTestLab: unsupported repo type: ' + command)
-        sync_cmd = self.redteam.funcs.which(command) + args
-        r = self.redteam.funcs.run_command(sync_cmd, 'syncing repos')
+        sync_cmd = CTLUtils.which(command) + args
+        r = CTLUtils.run_command(sync_cmd, 'syncing repos')
 
     def prep_swap(self):
-        rm = self.redteam.funcs.which('rm')
+        rm = CTLUtils.which('rm')
         cmd = rm + ' -Rf ' + self.swap_path + '/*'
-        r = self.redteam.funcs.run_command(cmd, 'clean up swap path')
+        r = CTLUtils.run_command(cmd, 'clean up swap path')
 
     def prep_rpm(self, repo, rpm):
-        cp = self.redteam.funcs.which('cp')
+        cp = CTLUtils.which('cp')
         cmd = cp + ' ' + self.repo_dir + '/' + \
               repo + '/' + rpm + ' ' + \
               self.swap_path
-        r = self.redteam.funcs.run_command(cmd, 'cp rpm to swap_path')
+        r = CTLUtils.run_command(cmd, 'cp rpm to swap_path')
 
         # crack the rpm open
-        # cd = self.redteam.funcs.which('cd')
-        rpm2cpio = self.redteam.funcs.which('rpm2cpio')
-        cpio = self.redteam.funcs.which('cpio')
+        # cd = CTLUtils.which('cd')
+        rpm2cpio = CTLUtils.which('rpm2cpio')
+        cpio = CTLUtils.which('cpio')
         cmd = '(cd ' + self.swap_path + ' && ' + rpm2cpio + ' ' + \
               rpm + ' | ' + cpio + ' -idm 2>&1 >/dev/null)'
-        r = self.redteam.funcs.run_command(cmd, 'rpm2cpio pipe to cpio')
+        r = CTLUtils.run_command(cmd, 'rpm2cpio pipe to cpio')
 
     def get_metadata(self, rpm):
         rpm_data = {}
         cmd = 'rpm -qip ' + self.swap_path + '/' + rpm
         # this is a list
-        rpm_qip = self.redteam.funcs.run_command(cmd, 'rpm -qip')
+        rpm_qip = CTLUtils.run_command(cmd, 'rpm -qip')
 
         if len(rpm_qip.split('Description :')) > 1:
             not_description, description = \
@@ -98,27 +91,6 @@ class CyberTestLab(object):
             rpm_data['Description'] = 'unable to parse `rpm -qip` output'
 
         return rpm_data
-
-    def find_elfs(self, **kwargs):
-        swap_path = self.swap_path
-        if kwargs.get('swap_path'):
-            swap_path = kwargs['swap_path']
-
-        find_results = []
-        find = self.redteam.funcs.which('find')
-        grep = self.redteam.funcs.which('grep')
-        cmd = find + ' ' + swap_path + \
-              ' -type f -exec file {} \; | ' + grep + ' -i elf'
-        find_results = self.redteam.funcs.run_command(cmd, 'find elfs')
-
-        elfs = []
-        for result in filter(None, find_results.split('\n')):
-            elfs.append(result.split(':')[0])
-
-        if len(elfs) == 0:
-            return None
-        else:
-            return filter(None, elfs)
 
     def scan_elfs(self, rpm, elfs):
         if not elfs:
@@ -140,7 +112,7 @@ class CyberTestLab(object):
             # get hardening-check results
             cmd = self.hardening_check + ' ' + binary
             hardening_results = \
-                self.redteam.funcs.run_command(cmd, 'hardening-check')
+                CTLUtils.run_command(cmd, 'hardening-check')
 
             # turn the hardening-check results into a dict
             pretty_results = {}
@@ -158,7 +130,7 @@ class CyberTestLab(object):
             # get function report
             cmd = self.hardening_check + ' -R ' + binary
             hardening_results = \
-                self.redteam.funcs.run_command(cmd, 'hardening-check -R')
+                CTLUtils.run_command(cmd, 'hardening-check -R')
             # relevant stuff starts at 9th line
             scan_results[relative_binary]['report-functions'] = \
                 filter(None, hardening_results.split('\n')[8:])
@@ -167,7 +139,7 @@ class CyberTestLab(object):
             cmd = self.hardening_check + ' -F ' + binary
             hcdashf = filter(
                 None,
-                self.redteam.funcs.run_command(cmd,
+                CTLUtils.run_command(cmd,
                                                'hardening-check -F').split('\n')
             )
             hcdashf_clean = []
