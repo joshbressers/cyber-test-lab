@@ -16,7 +16,7 @@ __version__ = '0.3'
 __status__ = 'beta'
 
 
-class CyberTestLab(object):
+class RPMTestLab(object):
     def __init__(self, **kwargs):
 
         self.repo_dir = '/repo'

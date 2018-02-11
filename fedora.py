@@ -25,7 +25,7 @@ def main(argv):
     repo_dir = sys.argv[2]
     swap_path = sys.argv[3]
     repos = ['fedora','google-chrome','rpmfusion-free','rpmfusion-free-updates','rpmfusion-nonfree','rpmfusion-nonfree-updates','spideroak-one-stable','updates']
-    ctl = CyberTestLab.CyberTestLab(repo_dir=repo_dir,
+    ctl = CyberTestLab.RPMTestLab(repo_dir=repo_dir,
                                     swap_path=swap_path,
                                     repo_list=repos,
                                     debug=True)
