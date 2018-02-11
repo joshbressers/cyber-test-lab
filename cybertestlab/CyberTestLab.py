@@ -103,3 +103,64 @@ class RPMTestLab(object):
         for i in scan_results.keys():
             scan_results[i]['rpm'] = rpm
         return scan_results
+
+
+
+class DEBTestLab(object):
+    def __init__(self, repo_dir, swap_dir, debug=False):
+
+        self.repo_dir = repo_dir
+
+        self.swap_path = swap_dir
+
+    def prep_swap(self):
+        rm = CTLUtils.which('rm')
+        cmd = rm + ' -Rf ' + self.swap_path + '/*'
+        r = CTLUtils.run_command(cmd, 'clean up swap path')
+
+    def prep_deb(self, deb):
+
+        # crack the deb open
+        dpkg = CTLUtils.which('dpkg')
+        cmd = dpkg + ' -x ' + deb + ' ' + self.swap_path
+        r = CTLUtils.run_command(cmd, 'dpkg -x')
+
+    def get_metadata(self, deb):
+        # I'm keeping the rpm variables because it amuses me
+        rpm_data = {}
+        # XXX use the which() function and path.join
+        cmd = 'dpkg --info ' + deb
+        # this is a list
+        rpm_qip = CTLUtils.run_command(cmd, 'dpkg --info')
+
+        if len(rpm_qip.split(' Description:')) > 1:
+            not_description, description = \
+                rpm_qip.split(' Description:')
+            raw_metadata = not_description.split('\n')
+            metadata = {}
+            for line in raw_metadata:
+                line = line.lstrip()
+                line = line.rstrip()
+                if line == '':
+                    continue
+                if ":" not in line: # Skip lines that lack a :
+                    continue
+                k, v = line.split(':', 1)
+                metadata[k.rstrip().lstrip()] = v.rstrip().lstrip()
+            metadata['Description'] = description.lstrip()
+            rpm_data['spec_data'] = metadata
+        else:
+            rpm_data['Description'] = 'No description'
+
+        return rpm_data
+
+    def find_elfs(self):
+        return CTLUtils.find_elfs(self.swap_path)
+
+    def scan_elfs(self, deb, elfs):
+
+        analysis = Analysis(self.swap_path)
+        scan_results = analysis.scan_elfs(elfs)
+        for i in scan_results.keys():
+            scan_results[i]['deb'] = deb
+        return scan_results
