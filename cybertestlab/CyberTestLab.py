@@ -7,6 +7,7 @@ import r2pipe
 import timeout_decorator
 
 from Utility import CTLUtils
+from Analysis import Analysis
 
 __author__ = 'Jason Callaway'
 __email__ = 'jasoncallaway@fedoraproject.org'
@@ -96,103 +97,9 @@ class CyberTestLab(object):
         return CTLUtils.find_elfs(self.swap_path)
 
     def scan_elfs(self, rpm, elfs):
-        if not elfs:
-            raise Exception('scan_elfs: you gave me an empty list of elfs you dope')
-        scan_results = {}
-        
-        for elf in elfs:
-            if self.debug:
-                print('++ elf: ' + elf.replace(self.swap_path + '/', ''))
-            binary = elf
-            relative_binary = \
-                binary.replace(self.swap_path + '/', '').replace('.', '_')
 
-            scan_results[relative_binary] = {}
-            scan_results[relative_binary]['rpm'] = rpm
-            scan_results[relative_binary]['filename'] = binary.replace(
-                self.swap_path + '/', '')
-
-            # get hardening-check results
-            cmd = self.hardening_check + ' ' + binary
-            hardening_results = \
-                CTLUtils.run_command(cmd, 'hardening-check')
-
-            # turn the hardening-check results into a dict
-            pretty_results = {}
-            for hr in hardening_results.split('\n'):
-                if self.swap_path in hr:
-                    continue
-                if hr == '':
-                    continue
-                hrlist = hr.split(':')
-                test = hrlist[0]
-                finding = hrlist[1]
-                pretty_results[test.rstrip()] = finding.rstrip().lstrip()
-            scan_results[relative_binary]['hardening-check'] = pretty_results
-
-            # get function report
-            cmd = self.hardening_check + ' -R ' + binary
-            hardening_results = \
-                CTLUtils.run_command(cmd, 'hardening-check -R')
-            # relevant stuff starts at 9th line
-            scan_results[relative_binary]['report-functions'] = \
-                filter(None, hardening_results.split('\n')[8:])
-
-            # get libc functions
-            cmd = self.hardening_check + ' -F ' + binary
-            hcdashf = filter(
-                None,
-                CTLUtils.run_command(cmd,
-                                               'hardening-check -F').split('\n')
-            )
-            hcdashf_clean = []
-            for lib in hcdashf:
-                if len(lib.split("'")) > 1:
-                    hcdashf_clean.append(lib.split("'")[1])
-                    scan_results[relative_binary]['find-libc-functions'] = \
-                        hcdashf_clean
-                else:
-                    if self.debug:
-                        print('+++ ' + elf.replace(self.swap_path + '/', '') +
-                              ' had no `hardening-check -F` output')
-
-            scan_results[relative_binary]['complexity'] = self.get_complexity(binary)
-
+        analysis = Analysis(self.swap_path)
+        scan_results = analysis.scan_elfs(elfs)
+        for i in scan_results.keys():
+            scan_results[i]['rpm'] = rpm
         return scan_results
-
-    @timeout_decorator.timeout(600)
-    def get_complexity(self, elf):
-        complexity = 0
-        cycles_cost = 0
-        try:
-            r2 = r2pipe.open(elf)
-            if self.debug:
-                print('++ starting aa')
-            r2.cmd("aa")
-            if '.so.' in elf or elf.endswith('.so'):
-                ccomplexities = []
-                complexities = []
-                functions = r2.cmdj('aflj')
-                for f in functions:
-                    if f.get('name'):
-                        ccomplexities.append(r2.cmd('afCc @' + f['name']))
-                        complexities.append(r2.cmd('afC @' + f['name']))
-                cycles_cost = max(complexities)
-                complexity = max(ccomplexities)
-            elif '.a.' in elf or elf.endswith('.a'):
-                complexity = r2.cmdj('afCc')
-            else:
-                cycles_cost = r2.cmdj('afC @main')
-                complexity = r2.cmdj('afCc @main')
-        except Exception as e:
-            if self.debug:
-                print('++ get_complexity caught exception: ' + str(e))
-            r2.quit()
-            return {'r2aa': 'failed: ' + str(e)}
-
-        r2.quit()
-        return {'r2aa':
-                    {'afCc': complexity,
-                     'afC': cycles_cost
-                     }
-                }
